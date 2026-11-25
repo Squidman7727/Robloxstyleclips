@@ -1,128 +1,127 @@
 {
  "title": "At This School, The Bell Chooses Who Goes Home",
  "voice": "en-US-AndrewNeural",
- "rate": "+16%",
- "seconds": 55,
+ "rate": "+18%",
+ "seconds": 52,
  "fps": 60,
  "fx": {
   "speed_lines": true,
   "flash_into": [
-   "leave",
-   "changed",
-   "principal"
+   "s10",
+   "s12"
   ]
  },
  "shots": [
   {
-   "id": "hook",
+   "id": "s01",
    "line": "At my school, the final bell doesn't mean everyone goes home."
   },
   {
-   "id": "choose",
+   "id": "s02",
    "line": "It means the school gets to choose."
   },
   {
-   "id": "daily",
+   "id": "s03",
    "line": "Every day at 3 PM, the bell rings once."
   },
   {
-   "id": "screen",
+   "id": "s04",
    "line": "Then a name appears on the giant screen above the entrance."
   },
   {
-   "id": "leave",
+   "id": "s05",
    "line": "That person gets to leave."
   },
   {
-   "id": "stay",
+   "id": "s06",
    "line": "Everyone else has to stay."
   },
   {
-   "id": "friend",
+   "id": "s07",
    "line": "Yesterday, my best friend got picked."
   },
   {
-   "id": "run",
+   "id": "s08",
    "line": "He celebrated, grabbed his backpack, and ran straight for the exit."
   },
   {
-   "id": "reach",
+   "id": "s09",
    "line": "But just before he reached the door..."
   },
   {
-   "id": "changed",
+   "id": "s10",
    "line": "The screen changed."
   },
   {
-   "id": "disappear",
+   "id": "s11",
    "line": "His name disappeared."
   },
   {
-   "id": "appear",
+   "id": "s12",
    "line": "And someone else's name appeared."
   },
   {
-   "id": "silent",
+   "id": "s13",
    "line": "Nobody said a word."
   },
   {
-   "id": "drag",
+   "id": "s14",
    "line": "The teachers just dragged him back to class like nothing happened."
   },
   {
-   "id": "today",
+   "id": "s15",
    "line": "Then today, something weird happened."
   },
   {
-   "id": "myname",
+   "id": "s16",
    "line": "The screen showed MY name."
   },
   {
-   "id": "believe",
+   "id": "s17",
    "line": "I couldn't believe it."
   },
   {
-   "id": "sprint",
+   "id": "s18",
    "line": "I grabbed my bag and sprinted towards the entrance."
   },
   {
-   "id": "principal",
+   "id": "s19",
    "line": "But when I reached the door, the principal was standing there."
   },
   {
-   "id": "whisper",
+   "id": "s20",
    "line": "He looked at me and whispered..."
   },
   {
-   "id": "not",
-   "line": "You're not supposed to be here."
+   "id": "s21",
+   "line": "\"You're not supposed to be here.\""
   },
   {
-   "id": "turn",
+   "id": "s22",
    "line": "I turned around."
   },
   {
-   "id": "empty",
+   "id": "s23",
    "line": "The entire school was empty."
   },
   {
-   "id": "bell",
+   "id": "s24",
    "line": "Then the bell rang again."
   },
   {
-   "id": "final",
+   "id": "s25",
    "line": "And the screen displayed one final name."
   },
   {
-   "id": "boss",
+   "id": "s26",
    "line": "THE PRINCIPAL."
   },
   {
-   "id": "up",
+   "id": "s27",
    "line": "He slowly looked up at it..."
   },
   {
-   "id": "loop",
+   "id": "s28",
    "line": "And started running."
   }
  ]
