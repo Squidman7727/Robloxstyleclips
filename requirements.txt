@@ -3,6 +3,4 @@ requests
 flask
 edge-tts
 numpy
-opencv-python
 pillow
-skia-python

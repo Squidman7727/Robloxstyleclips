@@ -1,11 +1,13 @@
 services:
   - type: web
-    name: in-this-town-telegram-bot
+    name: roblox-story-pro-bot
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
       - key: TELEGRAM_TOKEN
         sync: false
       - key: GEMINI_API_KEY

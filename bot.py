@@ -1,17 +1,18 @@
-"""24/7 Telegram Bot — Title + Script Guided Flow (Blender 5.2 + Python on GitHub Actions).
+"""24/7 Telegram Bot for Pro Roblox Story Kit (Blender 5.2 + 45 SFX + Music + Layered Acting).
 Flow:
-  1. Send /start (or /new) -> Bot asks for the TITLE.
-  2. Paste your TITLE -> Bot asks for the SCRIPT.
-  3. Paste your SCRIPT -> Bot keeps your exact words, builds the Blender 3D scenes,
-     renders 1080x1920 60 fps across 20 GitHub runners with live Telegram progress,
-     and sends FINAL.mp4 straight back to chat!
+  1. Send /start -> Bot asks for TITLE.
+  2. Paste TITLE -> Bot asks for SCRIPT.
+  3. Paste SCRIPT -> Bot builds engine/videos/<slug>/script.txt + shots.py,
+     pushes to GitHub, triggers 20 parallel Blender 5.2 runners with live Telegram progress,
+     sends a preview contact sheet, and delivers final_phone.mp4 straight back to Telegram!
+  Or send /demo to render the included 71-second pro example `sneeze_teleport` immediately.
 """
-import os, re, json, time, base64, asyncio, threading, logging
+import os, re, time, base64, asyncio, threading, logging
 import requests
 from flask import Flask
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
-from story_gen import build_from_user_script
+from story_gen import build_pro_shots
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("bot")
@@ -28,13 +29,12 @@ GH_HEADERS = {
     "X-GitHub-Api-Version": "2022-11-28",
 }
 
-# Per-chat conversation state: {"step": "title" | "script", "title": "..."}
 USER_STATE = {}
 
 
 def slugify(text: str) -> str:
     s = re.sub(r"[^a-z0-9]+", "_", text.strip().lower()).strip("_")
-    return (s[:36] or "short").strip("_")
+    return (s[:36] or "story").strip("_")
 
 
 def gh_put_file(path: str, content_str: str, message: str):
@@ -52,22 +52,18 @@ def gh_put_file(path: str, content_str: str, message: str):
     resp.raise_for_status()
 
 
-def gh_trigger_workflow(slug: str, chat_id: int, sign_text: str = "THANK|YOU"):
-    url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/render_blender.yml/dispatches"
+def gh_trigger_workflow(slug: str, chat_id: int):
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/render_pro.yml/dispatches"
     payload = {
         "ref": GITHUB_BRANCH,
-        "inputs": {
-            "slug": slug,
-            "chat_id": str(chat_id),
-            "sign_text": sign_text,
-        },
+        "inputs": {"slug": slug, "chat_id": str(chat_id)},
     }
     resp = requests.post(url, headers=GH_HEADERS, json=payload, timeout=30)
     resp.raise_for_status()
 
 
 def gh_latest_run():
-    url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/render_blender.yml/runs"
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/render_pro.yml/runs"
     r = requests.get(url, headers=GH_HEADERS, params={"per_page": 1}, timeout=20)
     r.raise_for_status()
     runs = r.json().get("workflow_runs", [])
@@ -106,12 +102,12 @@ def format_run_progress(run: dict, jobs: list, slug: str, elapsed_s: int) -> str
         status_line = f"completed ({run.get('conclusion', '')})"
 
     return "\n".join([
-        f"🎬 Render: {slug}",
+        f"🎬 Pro Studio Render: {slug}",
         f"Status: {status_line} | Elapsed: {mins}m {secs:02d}s",
         "",
-        f"1. Voice & Textures: {icon(prep)}",
-        f"2. Blender 60fps: [{bar}] {r_done}/{r_tot} done ({r_run} running" + (f", {r_fail} failed)" if r_fail else ")"),
-        f"3. Captions & MP4: {icon(fin)}",
+        f"1. Voice, Cues & Contact Sheet: {icon(prep)}",
+        f"2. Blender 5.2 (20 runners): [{bar}] {r_done}/{r_tot} done ({r_run} running" + (f", {r_fail} failed)" if r_fail else ")"),
+        f"3. SFX Mix, Captions & MP4: {icon(fin)}",
         "",
         f"Logs: {run.get('html_url', '')}",
     ])
@@ -164,15 +160,15 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     USER_STATE[chat_id] = {"step": "title"}
     await update.message.reply_text(
+        "Pro Roblox Story Studio ready!\n\n"
         "Step 1/2 — Paste your Short's TITLE:\n\n"
-        "(Send /cancel to reset or /status to check a running render.)"
+        "(Send /demo to render the included 71s pro example 'sneeze_teleport', /status to check progress, or /cancel to reset.)"
     )
 
 
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    USER_STATE.pop(chat_id, None)
-    await update.message.reply_text("Cancelled. Send /start whenever you want to make a new Short.")
+    USER_STATE.pop(update.effective_chat.id, None)
+    await update.message.reply_text("Cancelled. Send /start anytime.")
 
 
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -195,12 +191,12 @@ async def cmd_demo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if not is_allowed(chat_id):
         return
-    msg = await update.message.reply_text("Starting GitHub Actions render for never_say_thank_you...")
+    msg = await update.message.reply_text("Starting 20-runner Pro Studio render for sneeze_teleport (66 shots, 71s)...")
     try:
         prev = gh_latest_run()
         prev_id = prev["id"] if prev else None
-        gh_trigger_workflow("never_say_thank_you", chat_id, "THANK|YOU")
-        asyncio.create_task(track_live_progress(msg, "never_say_thank_you", prev_id))
+        gh_trigger_workflow("sneeze_teleport", chat_id)
+        asyncio.create_task(track_live_progress(msg, "sneeze_teleport", prev_id))
     except Exception as e:
         log.exception("Demo trigger failed")
         await msg.edit_text(f"Error triggering GitHub Actions: {e}")
@@ -236,26 +232,25 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         slug = slugify(title)
         wc = len(script.split())
         status = await update.message.reply_text(
-            f"Got your script ({wc} words)! Building Blender 3D scenes for '{title}'..."
+            f"Got your script ({wc} words)! Directing pro Roblox Studio shots + SFX for '{title}'..."
         )
         try:
-            story_json, story_py, sign_text = build_from_user_script(title, script, slug)
-            n_shots = len(story_json["shots"])
-            secs = story_json["seconds"]
+            shots_py = build_pro_shots(title, script, slug)
+            n_shots = len(re.findall(r"@S\(\s*\d+\s*,", shots_py))
 
-            gh_put_file(f"stories/{slug}.json", json.dumps(story_json, indent=1), f"Add story {slug}.json")
-            gh_put_file(f"stories/{slug}.py", story_py, f"Add Blender scene {slug}.py")
+            gh_put_file(f"engine/videos/{slug}/script.txt", f"# {title}\n{script}\n", f"Add script {slug}")
+            gh_put_file(f"engine/videos/{slug}/shots.py", shots_py, f"Add pro shots {slug}")
 
             prev = gh_latest_run()
             prev_id = prev["id"] if prev else None
-            gh_trigger_workflow(slug, chat_id, sign_text)
+            gh_trigger_workflow(slug, chat_id)
 
             await status.edit_text(
-                f"Built {n_shots} Blender shots (~{secs}s @ 60 fps)! Starting 20 parallel GitHub runners..."
+                f"Directed {n_shots} pro shots with SFX & camera moves! Starting 20 parallel Blender 5.2 runners..."
             )
             asyncio.create_task(track_live_progress(status, slug, prev_id))
         except Exception as e:
-            log.exception("Failed building/rendering user script")
+            log.exception("Failed building pro shots")
             await status.edit_text(f"Error: {e}\n\nSend /start to try again.")
 
 
@@ -281,7 +276,7 @@ def main():
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(CommandHandler("demo", cmd_demo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    log.info("Telegram bot started (Title + Script guided flow)...")
+    log.info("Pro Roblox Story Telegram bot started...")
     app.run_polling(drop_pending_updates=True)
 
 
