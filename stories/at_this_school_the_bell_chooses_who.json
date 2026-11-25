@@ -1,0 +1,129 @@
+{
+ "title": "At This School, The Bell Chooses Who Goes Home",
+ "voice": "en-US-AndrewNeural",
+ "rate": "+16%",
+ "seconds": 55,
+ "fps": 60,
+ "fx": {
+  "speed_lines": true,
+  "flash_into": [
+   "leave",
+   "changed",
+   "principal"
+  ]
+ },
+ "shots": [
+  {
+   "id": "hook",
+   "line": "At my school, the final bell doesn't mean everyone goes home."
+  },
+  {
+   "id": "choose",
+   "line": "It means the school gets to choose."
+  },
+  {
+   "id": "daily",
+   "line": "Every day at 3 PM, the bell rings once."
+  },
+  {
+   "id": "screen",
+   "line": "Then a name appears on the giant screen above the entrance."
+  },
+  {
+   "id": "leave",
+   "line": "That person gets to leave."
+  },
+  {
+   "id": "stay",
+   "line": "Everyone else has to stay."
+  },
+  {
+   "id": "friend",
+   "line": "Yesterday, my best friend got picked."
+  },
+  {
+   "id": "run",
+   "line": "He celebrated, grabbed his backpack, and ran straight for the exit."
+  },
+  {
+   "id": "reach",
+   "line": "But just before he reached the door..."
+  },
+  {
+   "id": "changed",
+   "line": "The screen changed."
+  },
+  {
+   "id": "disappear",
+   "line": "His name disappeared."
+  },
+  {
+   "id": "appear",
+   "line": "And someone else's name appeared."
+  },
+  {
+   "id": "silent",
+   "line": "Nobody said a word."
+  },
+  {
+   "id": "drag",
+   "line": "The teachers just dragged him back to class like nothing happened."
+  },
+  {
+   "id": "today",
+   "line": "Then today, something weird happened."
+  },
+  {
+   "id": "myname",
+   "line": "The screen showed MY name."
+  },
+  {
+   "id": "believe",
+   "line": "I couldn't believe it."
+  },
+  {
+   "id": "sprint",
+   "line": "I grabbed my bag and sprinted towards the entrance."
+  },
+  {
+   "id": "principal",
+   "line": "But when I reached the door, the principal was standing there."
+  },
+  {
+   "id": "whisper",
+   "line": "He looked at me and whispered..."
+  },
+  {
+   "id": "not",
+   "line": "You're not supposed to be here."
+  },
+  {
+   "id": "turn",
+   "line": "I turned around."
+  },
+  {
+   "id": "empty",
+   "line": "The entire school was empty."
+  },
+  {
+   "id": "bell",
+   "line": "Then the bell rang again."
+  },
+  {
+   "id": "final",
+   "line": "And the screen displayed one final name."
+  },
+  {
+   "id": "boss",
+   "line": "THE PRINCIPAL."
+  },
+  {
+   "id": "up",
+   "line": "He slowly looked up at it..."
+  },
+  {
+   "id": "loop",
+   "line": "And started running."
+  }
+ ]
+}
