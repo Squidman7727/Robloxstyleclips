@@ -1,0 +1,28 @@
+{
+ "title": "In This Town, Never Say Thank You",
+ "voice": "en-US-AndrewNeural",
+ "rate": "+18%",
+ "seconds": 20,
+ "fps": 60,
+ "samples": 16,
+ "fx": {"speed_lines": true, "flash_into": ["rule", "slip", "since"]},
+ "shots": [
+  {"id": "hook",    "line": "In this town,"},
+  {"id": "rule",    "line": "you must never say thank you."},
+  {"id": "help",    "line": "If someone helps you,"},
+  {"id": "rude",    "line": "you have to be rude back."},
+  {"id": "mom",     "line": "My mom serves me dinner,"},
+  {"id": "awful",   "line": "and I call it trash."},
+  {"id": "dad",     "line": "My dad slams doors on everyone,"},
+  {"id": "dadface", "line": "just in case."},
+  {"id": "polite",  "line": "Manners are illegal."},
+  {"id": "slip",    "line": "But last night, someone caught my phone."},
+  {"id": "said",    "line": "By habit, I said thank you."},
+  {"id": "silent",  "line": "The whole street froze."},
+  {"id": "turn",    "line": "The stranger slowly turned around."},
+  {"id": "grin",    "line": "He grinned and said,"},
+  {"id": "welcome", "line": "You're welcome. Now you're mine."},
+  {"id": "since",   "line": "He's been watching me ever since."},
+  {"id": "loop",    "line": "Because..."}
+ ]
+}
