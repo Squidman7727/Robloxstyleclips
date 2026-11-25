@@ -1,0 +1,197 @@
+name: Render Pro Roblox Story (Blender 5.2 + 45 SFX + Vision QA)
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Video slug inside engine/videos/<slug>/"
+        required: true
+        default: "sneeze_teleport"
+      chat_id:
+        description: "Telegram chat_id to send contact sheet & final MP4 to"
+        required: false
+        default: ""
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system libs & Python deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg xvfb libegl1 libgl1 libgl1-mesa-dri libgles2 libglu1-mesa libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 xz-utils fonts-dejavu-core
+          pip install -q edge-tts numpy pillow requests
+
+      - name: Cache Blender 5.2.5 LTS
+        id: cache-blender
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/blender
+          key: blender-5.2.5-linux-x64
+
+      - name: Download Blender 5.2.5 LTS
+        if: steps.cache-blender.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /home/runner/blender
+          curl -L -s https://download.blender.org/release/Blender5.2/blender-5.2.5-linux-x64.tar.xz | tar -xJ -C /home/runner/blender --strip-components=1
+
+      - name: Generate voice, preview contact sheet & Auto Vision QA Fix
+        working-directory: engine
+        env:
+          BLENDER: /home/runner/blender/blender
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python3 tools/free_voice.py ${{ github.event.inputs.slug }}
+          xvfb-run -a python3 tools/blend.py ${{ github.event.inputs.slug }} preview all 6
+          python3 tools/contact.py ${{ github.event.inputs.slug }} all 10 full || true
+          if [ -f tools/vision_fix.py ]; then
+            python3 tools/vision_fix.py ${{ github.event.inputs.slug }} || true
+            rm -f videos/${{ github.event.inputs.slug }}/render_log_preview.txt videos/${{ github.event.inputs.slug }}/preview/*.png
+            xvfb-run -a python3 tools/blend.py ${{ github.event.inputs.slug }} preview all 6
+            python3 tools/contact.py ${{ github.event.inputs.slug }} all 10 full || true
+          fi
+          xvfb-run -a python3 tools/blend.py ${{ github.event.inputs.slug }} cues
+
+      - name: Send Preview Contact Sheet to Telegram
+        if: ${{ github.event.inputs.chat_id != '' }}
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ github.event.inputs.chat_id }}
+          SLUG: ${{ github.event.inputs.slug }}
+        run: |
+          python3 - << 'EOF'
+          import os, requests
+          tok, cid, slug = os.environ["TELEGRAM_TOKEN"], os.environ["CHAT_ID"], os.environ["SLUG"]
+          img = f"engine/videos/{slug}/full.jpg"
+          if tok and os.path.exists(img):
+              with open(img, "rb") as f:
+                  requests.post(
+                      f"https://api.telegram.org/bot{tok}/sendPhoto",
+                      data={"chat_id": cid, "caption": f"QA-checked preview contact sheet for {slug}! Now rendering full HD across 20 Blender runners..."},
+                      files={"photo": f},
+                      timeout=60,
+                  )
+          EOF
+
+      - name: Upload prepared audio, cues & QA-fixed shots.py
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepared-audio
+          path: |
+            engine/videos/${{ github.event.inputs.slug }}/audio/
+            engine/videos/${{ github.event.inputs.slug }}/shots.py
+
+  render:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: prepared-audio
+          path: engine/videos/${{ github.event.inputs.slug }}
+
+      - name: Install headless OpenGL / Xvfb libs
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libegl1 libgl1 libgl1-mesa-dri libgles2 libglu1-mesa libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 xz-utils
+
+      - name: Cache Blender 5.2.5 LTS
+        id: cache-blender
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/blender
+          key: blender-5.2.5-linux-x64
+
+      - name: Download Blender 5.2.5 LTS
+        if: steps.cache-blender.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /home/runner/blender
+          curl -L -s https://download.blender.org/release/Blender5.2/blender-5.2.5-linux-x64.tar.xz | tar -xJ -C /home/runner/blender --strip-components=1
+
+      - name: Render assigned shots (part ${{ matrix.part }}/20)
+        working-directory: engine
+        env:
+          BLENDER: /home/runner/blender/blender
+        run: |
+          IDS=$(python3 tools/split_shots.py ${{ github.event.inputs.slug }} ${{ matrix.part }} 20)
+          echo "Assigned shot IDs: $IDS"
+          if [ -n "$IDS" ]; then
+            xvfb-run -a python3 tools/blend.py ${{ github.event.inputs.slug }} final "$IDS" 12
+          fi
+
+      - name: Upload frame chunk ${{ matrix.part }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: frames-${{ matrix.part }}
+          path: engine/videos/${{ github.event.inputs.slug }}/frames/
+          if-no-files-found: ignore
+
+  finish:
+    needs: render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: prepared-audio
+          path: engine/videos/${{ github.event.inputs.slug }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: frames-*
+          merge-multiple: true
+          path: engine/videos/${{ github.event.inputs.slug }}/frames
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Mix voice + 45 SFX + captions -> final.mp4 & final_phone.mp4
+        working-directory: engine
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+          pip install -q numpy pillow requests
+          ls videos/${{ github.event.inputs.slug }}/frames | wc -l
+          python3 tools/finish.py ${{ github.event.inputs.slug }} --no-music
+          ls -lh videos/${{ github.event.inputs.slug }}/out/
+
+      - name: Upload final.mp4 as GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.slug }}_FINAL
+          path: |
+            engine/videos/${{ github.event.inputs.slug }}/out/final.mp4
+            engine/videos/${{ github.event.inputs.slug }}/out/final_phone.mp4
+
+      - name: Send final_phone.mp4 back to Telegram
+        if: ${{ github.event.inputs.chat_id != '' }}
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ github.event.inputs.chat_id }}
+          SLUG: ${{ github.event.inputs.slug }}
+        run: |
+          python3 - << 'EOF'
+          import os, requests
+          token = os.environ["TELEGRAM_TOKEN"]
+          chat_id = os.environ["CHAT_ID"]
+          slug = os.environ["SLUG"]
+          vid = f"engine/videos/{slug}/out/final_phone.mp4"
+          with open(vid, "rb") as vf:
+              r = requests.post(
+                  f"https://api.telegram.org/bot{token}/sendVideo",
+                  data={"chat_id": chat_id, "caption": f"Done! Pro Roblox Story: {slug}"},
+                  files={"video": (f"{slug}_FINAL.mp4", vf, "video/mp4")},
+                  timeout=180,
+              )
+          r.raise_for_status()
+          print("Sent final_phone.mp4 to Telegram!")
+          EOF
