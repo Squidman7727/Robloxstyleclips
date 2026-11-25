@@ -1,0 +1,153 @@
+name: Render In This Town Short (Blender 5.2 + Python)
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Story slug in stories/<slug>.json"
+        required: true
+        default: "never_say_thank_you"
+      chat_id:
+        description: "Telegram chat_id to send the finished MP4 back to (optional)"
+        required: false
+        default: ""
+      sign_text:
+        description: "Two-word banned street sign separated by | (e.g. THANK|YOU)"
+        required: false
+        default: "THANK|YOU"
+
+jobs:
+  # 1) Generate voiceover (edge-tts) + face/sign textures (skia)
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system libs & Python deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg libegl1 libgl1 fonts-dejavu-core
+          pip install -q edge-tts skia-python numpy
+
+      - name: Generate voiceover + textures
+        env:
+          CUSTOM_SIGN_TEXT: ${{ github.event.inputs.sign_text }}
+        run: |
+          python3 rt_voice.py stories/${{ github.event.inputs.slug }}.json
+          python3 rt_faces.py
+
+      - name: Upload voice & textures
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepared-bundle
+          path: |
+            build/vo.wav
+            build/words.json
+            build/tex/
+
+  # 2) Render 1,200 frames (1080x1920 @ 60 fps) across 20 parallel Blender 5.2 runners (only 60 frames each!)
+  render:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: prepared-bundle
+
+      - name: Install headless OpenGL / Xvfb libs
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libegl1 libgl1 libgl1-mesa-dri libgles2 libglu1-mesa libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 xz-utils
+
+      - name: Cache Blender 5.2.5 LTS
+        id: cache-blender
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/blender
+          key: blender-5.2.5-linux-x64
+
+      - name: Download Blender 5.2.5 LTS
+        if: steps.cache-blender.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /home/runner/blender
+          curl -L -s https://download.blender.org/release/Blender5.2/blender-5.2.5-linux-x64.tar.xz | tar -xJ -C /home/runner/blender --strip-components=1
+
+      - name: Render 60 frames (part ${{ matrix.part }}/20)
+        env:
+          FAST_CPU: "1"
+        run: |
+          xvfb-run -a /home/runner/blender/blender -b --factory-startup --python rt_render.py -- stories/${{ github.event.inputs.slug }}.json --part ${{ matrix.part }}/20
+
+      - name: Upload frame chunk ${{ matrix.part }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: frames-${{ matrix.part }}
+          path: |
+            build/frames/
+            build/shots.json
+
+  # 3) Composite glow, speed lines, captions & voiceover -> FINAL.mp4, then send to Telegram!
+  finish:
+    needs: render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: prepared-bundle
+
+      - name: Download all 20 rendered frame chunks
+        uses: actions/download-artifact@v4
+        with:
+          pattern: frames-*
+          merge-multiple: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Composite FINAL.mp4 (60 fps, 1080x1920)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+          pip install -q opencv-python pillow numpy requests
+          python3 rt_finish.py stories/${{ github.event.inputs.slug }}.json
+          ls -lh build/FINAL.mp4
+
+      - name: Upload FINAL.mp4 as GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.slug }}_FINAL
+          path: build/FINAL.mp4
+
+      - name: Send FINAL.mp4 back to Telegram
+        if: ${{ github.event.inputs.chat_id != '' }}
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ github.event.inputs.chat_id }}
+          SLUG: ${{ github.event.inputs.slug }}
+        run: |
+          python3 - << 'EOF'
+          import os, requests
+          token = os.environ["TELEGRAM_TOKEN"]
+          chat_id = os.environ["CHAT_ID"]
+          slug = os.environ["SLUG"]
+          with open("build/FINAL.mp4", "rb") as vf:
+              r = requests.post(
+                  f"https://api.telegram.org/bot{token}/sendVideo",
+                  data={"chat_id": chat_id, "caption": f"Done! 60 fps short: {slug}"},
+                  files={"video": (f"{slug}_FINAL.mp4", vf, "video/mp4")},
+                  timeout=120,
+              )
+          r.raise_for_status()
+          print("Sent video to Telegram chat:", chat_id)
+          EOF
