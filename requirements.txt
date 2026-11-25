@@ -1,0 +1,8 @@
+python-telegram-bot==21.10
+requests
+flask
+edge-tts
+numpy
+opencv-python
+pillow
+skia-python
