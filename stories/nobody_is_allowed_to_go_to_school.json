@@ -1,0 +1,86 @@
+{
+ "title": "In This Town, Nobody Is Allowed To Go To School",
+ "voice": "en-US-AndrewNeural",
+ "rate": "+18%",
+ "seconds": 20,
+ "fps": 60,
+ "samples": 16,
+ "fx": {
+  "speed_lines": true,
+  "flash_into": [
+   "rule",
+   "slip",
+   "since"
+  ]
+ },
+ "shots": [
+  {
+   "id": "hook",
+   "line": "In this town,"
+  },
+  {
+   "id": "rule",
+   "line": "school is a federal crime."
+  },
+  {
+   "id": "help",
+   "line": "If you open a textbook,"
+  },
+  {
+   "id": "rude",
+   "line": "the sirens start wailing."
+  },
+  {
+   "id": "mom",
+   "line": "My mom hides my math book,"
+  },
+  {
+   "id": "awful",
+   "line": "and burns every pencil."
+  },
+  {
+   "id": "dad",
+   "line": "My dad patrols the hallway,"
+  },
+  {
+   "id": "dadface",
+   "line": "just in case."
+  },
+  {
+   "id": "polite",
+   "line": "Learning is illegal."
+  },
+  {
+   "id": "slip",
+   "line": "But last night, I found a flashcard."
+  },
+  {
+   "id": "said",
+   "line": "By habit, I read it out loud."
+  },
+  {
+   "id": "silent",
+   "line": "The whole street froze."
+  },
+  {
+   "id": "turn",
+   "line": "The inspector slowly turned around."
+  },
+  {
+   "id": "grin",
+   "line": "He smiled and said,"
+  },
+  {
+   "id": "welcome",
+   "line": "Two plus two is five. Class is in session."
+  },
+  {
+   "id": "since",
+   "line": "He's been grading my papers ever since."
+  },
+  {
+   "id": "loop",
+   "line": "Because..."
+  }
+ ]
+}
